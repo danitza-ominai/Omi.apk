@@ -1,1 +1,377 @@
-(www/index.html
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#130924">
+  <title>OMI // Cyber-Neko AI</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@500;700&family=Space+Grotesk:wght@600;700&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Quicksand', sans-serif;
+      background: radial-gradient(circle at 50% 0%, #2a1454 0%, #0d071a 70%);
+      color: #f1f5f9;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .font-cyber { font-family: 'Space Grotesk', sans-serif; }
+    .glass {
+      background: rgba(30, 17, 58, 0.85);
+      backdrop-filter: blur(14px);
+      border: 1px solid rgba(45, 212, 191, 0.28);
+    }
+    .glow-turq { box-shadow: 0 0 18px rgba(45, 212, 191, 0.45); }
+  </style>
+</head>
+<body class="min-h-screen p-3.5 pb-24">
+
+  <!-- PANTALLA DE DESBLOQUEO DE AUDIO MÓVIL (Obligatorio en Android/iOS) -->
+  <div id="unlock-overlay" class="fixed inset-0 bg-[#0d071a]/95 z-50 flex flex-col items-center justify-center p-6 text-center">
+    <div class="w-24 h-24 rounded-3xl bg-gradient-to-br from-purple-600 to-teal-400 p-0.5 mb-4 glow-turq">
+      <div class="w-full h-full bg-[#130924] rounded-[22px] flex flex-col items-center justify-center">
+        <span class="text-xs text-teal-300 font-cyber">/\___/\</span>
+        <span class="text-2xl font-cyber text-white">(✧ω✧)</span>
+      </div>
+    </div>
+    <h1 class="text-xl font-bold font-cyber text-teal-300 mb-2">Activar Sistema de Voz de OMI</h1>
+    <p class="text-xs text-purple-200 max-w-xs mb-6 leading-relaxed">
+      Los teléfonos bloquean el sonido automático hasta que tocas la pantalla. Toca abajo para despertar la voz y los sensores de Omi.
+    </p>
+    <button onclick="despertarOmi()" class="bg-gradient-to-r from-teal-400 to-purple-400 text-slate-950 font-bold px-8 py-3.5 rounded-2xl text-sm glow-turq active:scale-95 transition">
+      🔊 Despertar a Omi Ahora
+    </button>
+  </div>
+
+  <div class="max-w-4xl mx-auto space-y-4">
+
+    <!-- AVISO DE ENTORNO (Detecta si sigues dentro de Spck) -->
+    <div id="alerta-entorno" class="hidden bg-amber-500/20 border border-amber-400/50 rounded-2xl p-3 text-xs text-amber-200">
+      ⚠️ <b>Estás dentro del visor de Spck Editor.</b> Para instalar la app o usar el micrófono libre, usa el menú de Spck (arriba a la izquierda) → tres puntos junto a <code>index.html</code> → <b>Export File</b> y ábrelo en Chrome.
+    </div>
+
+    <!-- CABECERA -->
+    <header class="glass rounded-3xl p-4 flex justify-between items-center">
+      <div class="flex items-center gap-2">
+        <div class="w-2.5 h-2.5 rounded-full bg-teal-400 glow-turq animate-pulse"></div>
+        <h1 class="text-base font-bold font-cyber bg-gradient-to-r from-teal-300 to-purple-300 bg-clip-text text-transparent">
+          OMI // CYBER-NEKO v3.5
+        </h1>
+      </div>
+      <div class="flex gap-1.5">
+        <button onclick="probarSonido()" class="text-[11px] bg-teal-500/20 border border-teal-400/40 text-teal-200 px-2.5 py-1.5 rounded-xl font-bold">
+          🔊 Probar Voz
+        </button>
+        <button onclick="abrirModalAPI()" class="text-[11px] bg-purple-500/20 border border-purple-400/40 text-purple-200 px-2.5 py-1.5 rounded-xl font-bold">
+          🔑 Gemini Key
+        </button>
+      </div>
+    </header>
+
+    <!-- NÚCLEO DE OMI -->
+    <section class="glass rounded-3xl p-4 space-y-3 border-teal-400/40">
+      <div class="flex items-center gap-3.5">
+        <div onclick="probarSonido()" class="w-16 h-16 rounded-2xl bg-gradient-to-br from-purple-600/40 to-teal-400/40 border border-teal-300/60 flex flex-col items-center justify-center shrink-0 cursor-pointer">
+          <span class="text-[9px] text-teal-300 font-cyber">/\___/\</span>
+          <span id="omi-face" class="text-lg font-cyber text-white">(✧ω✧)</span>
+          <span class="text-[8px] bg-teal-400 text-slate-950 font-bold px-1.5 rounded-full mt-0.5">OMI AI</span>
+        </div>
+
+        <div class="flex-1 min-w-0">
+          <span id="omi-status" class="text-[10px] font-cyber uppercase px-2 py-0.5 rounded-full bg-teal-500/20 text-teal-300">
+            EN LÍNEA ✨
+          </span>
+          <p id="omi-dialog" class="text-xs sm:text-sm text-purple-100 mt-1 leading-snug">
+            ¡Lista para guiarte hoy! Escríbeme abajo o usa el dictado por voz de tu teclado para hablar conmigo.
+          </p>
+        </div>
+      </div>
+
+      <!-- Entrada directa compatible con el micrófono del teclado del celular -->
+      <div class="flex gap-2 pt-2 border-t border-white/10">
+        <input id="input-chat" type="text" placeholder="Toca aquí y usa el 🎤 de tu teclado para hablar con Omi..."
+               onkeydown="if(event.key==='Enter') enviarComando()"
+               class="flex-1 bg-slate-950/90 border border-teal-400/40 rounded-2xl px-3 py-2.5 text-xs text-white focus:outline-none">
+        <button onclick="enviarComando()" class="bg-gradient-to-r from-teal-400 to-purple-400 text-slate-950 font-bold text-xs px-4 rounded-2xl shrink-0">
+          Hablar
+        </button>
+      </div>
+    </section>
+
+    <!-- TEMPORIZADOR CON SONIDO GARANTIZADO -->
+    <div class="glass rounded-3xl p-4 space-y-3">
+      <div class="flex justify-between items-center">
+        <span class="text-xs font-bold font-cyber text-teal-300">⏳ TEMPORIZADOR GUIADO</span>
+        <span id="timer-display" class="text-2xl font-bold font-cyber text-teal-300">25:00</span>
+      </div>
+      <div class="flex gap-2">
+        <button onclick="iniciarTimer(25, 'Enfoque Profundo')" class="flex-1 bg-teal-400 text-slate-950 font-bold text-xs py-2.5 rounded-xl">
+          ▶ 25m Enfoque
+        </button>
+        <button onclick="iniciarTimer(5, 'Sprint Rápido')" class="flex-1 bg-purple-500/30 border border-purple-400/40 text-purple-100 font-bold text-xs py-2.5 rounded-xl">
+          ⚡ 5m Sprint
+        </button>
+        <button onclick="detenerTimer()" class="bg-slate-800 text-slate-300 text-xs px-3.5 rounded-xl">⏹</button>
+      </div>
+    </div>
+
+    <!-- OBJETIVOS DIARIOS + HÁBITOS -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div class="glass rounded-3xl p-4 space-y-3">
+        <div class="flex justify-between items-center">
+          <h2 class="text-xs font-bold font-cyber text-teal-300">🎯 OBJETIVOS DE HOY</h2>
+          <span id="badge-tareas" class="text-[11px] font-cyber text-purple-200">0/0</span>
+        </div>
+        <div class="flex gap-1.5">
+          <input id="in-tarea" type="text" placeholder="Nuevo objetivo..." class="flex-1 bg-slate-950 border border-teal-400/30 rounded-xl px-3 py-2 text-xs text-white">
+          <button onclick="addTarea()" class="bg-teal-400 text-slate-950 font-bold px-3.5 rounded-xl text-sm">+</button>
+        </div>
+        <ul id="ul-tareas" class="space-y-2 text-xs"></ul>
+      </div>
+
+      <div class="glass rounded-3xl p-4 space-y-3">
+        <h2 class="text-xs font-bold font-cyber text-purple-300">⚡ RACHAS SEMANALES</h2>
+        <div id="cont-habitos" class="space-y-2"></div>
+        <div class="h-32 pt-2">
+          <canvas id="chartOmi"></canvas>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- MODAL API KEY -->
+  <div id="modal-api" class="fixed inset-0 bg-black/80 hidden items-center justify-center p-4 z-50">
+    <div class="glass rounded-3xl p-5 max-w-sm w-full space-y-3">
+      <h3 class="text-sm font-bold font-cyber text-teal-300">🔑 Clave de Gemini AI</h3>
+      <input id="input-key" type="password" placeholder="AIzaSy..." class="w-full bg-slate-950 border border-teal-400/40 rounded-xl px-3 py-2 text-xs text-white">
+      <div class="flex gap-2">
+        <button onclick="guardarKey()" class="flex-1 bg-teal-400 text-slate-950 font-bold text-xs py-2 rounded-xl">Guardar</button>
+        <button onclick="document.getElementById('modal-api').classList.add('hidden')" class="px-4 bg-slate-800 text-xs rounded-xl">Cerrar</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const dias = ['L', 'M', 'X', 'J', 'V', 'S', 'D'];
+    let audioCtx = null;
+    let geminiKey = localStorage.getItem('omi_key') || '';
+    let tareas = JSON.parse(localStorage.getItem('omi_t')) || [
+      { t: 'Completar bloque principal del día', ok: false },
+      { t: 'Revisar avances del proyecto', ok: false }
+    ];
+    let habitos = JSON.parse(localStorage.getItem('omi_h')) || [
+      { n: 'Deep Work / IA', d: [1, 1, 1, 0, 0, 0, 0] },
+      { n: 'Bienestar & Energía', d: [1, 0, 1, 1, 0, 0, 0] }
+    ];
+    let timerInt = null, segs = 1500, chart = null;
+
+    // 1. MOTOR DE SONIDO SINTETIZADO + VOZ COMPATIBLE CON MÓVIL
+    function inicializarAudio() {
+      if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      }
+      if (audioCtx.state === 'suspended') {
+        audioCtx.resume();
+      }
+    }
+
+    function melodiaKawaii() {
+      try {
+        inicializarAudio();
+        const notas = [523.25, 659.25, 783.99, 1046.50]; // C5, E5, G5, C6
+        notas.forEach((freq, idx) => {
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(freq, audioCtx.currentTime + idx * 0.09);
+          gain.gain.setValueAtTime(0.15, audioCtx.currentTime + idx * 0.09);
+          gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + idx * 0.09 + 0.2);
+          osc.connect(gain);
+          gain.connect(audioCtx.destination);
+          osc.start(audioCtx.currentTime + idx * 0.09);
+          osc.stop(audioCtx.currentTime + idx * 0.09 + 0.2);
+        });
+      } catch (e) {}
+    }
+
+    function hablarOmi(texto, cara = '(✧ω✧)') {
+      document.getElementById('omi-dialog').textContent = texto;
+      document.getElementById('omi-face').textContent = cara;
+      melodiaKawaii();
+
+      // Intento 1: Voz nativa del sistema
+      if ('speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+        const u = new SpeechSynthesisUtterance(texto);
+        u.lang = 'es-MX';
+        u.pitch = 1.25;
+        window.speechSynthesis.speak(u);
+      }
+
+      // Intento 2: Respaldo de voz por streaming si el WebView silencia speechSynthesis
+      try {
+        const textoCorto = encodeURIComponent(texto.slice(0, 180));
+        const audio = new Audio(`https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&tl=es&q=${textoCorto}`);
+        audio.play().catch(() => {});
+      } catch (e) {}
+    }
+
+    function despertarOmi() {
+      inicializarAudio();
+      document.getElementById('unlock-overlay').classList.add('hidden');
+      hablarOmi('¡Sistemas de audio activados! Hola, soy Omi. Estoy lista para ayudarte a cumplir todas tus metas de hoy.', '(≧◡≦)');
+      if (window.location.href.includes('spck') || window.self !== window.top) {
+        document.getElementById('alerta-entorno').classList.remove('hidden');
+      }
+    }
+
+    function probarSonido() {
+      const pend = tareas.filter(x => !x.ok).length;
+      hablarOmi(`¡Audio funcionando! Tienes ${pend} objetivos pendientes para hoy. ¡Vamos con todo!`, '(◕‿◕✿)');
+    }
+
+    // 2. PROCESADOR DE COMANDOS + GEMINI
+    async function enviarComando() {
+      const inp = document.getElementById('input-chat');
+      const txt = inp.value.trim();
+      if (!txt) return;
+      inp.value = '';
+      const low = txt.toLowerCase();
+
+      if (low.includes('enfoque') || low.includes('25')) {
+        iniciarTimer(25, 'Enfoque Profundo');
+        return;
+      }
+      if (low.includes('sprint') || low.includes('5')) {
+        iniciarTimer(5, 'Sprint Rápido');
+        return;
+      }
+
+      if (!geminiKey) {
+        hablarOmi(`Me dijiste: "${txt}". Para responderte con inteligencia artificial completa, toca el botón Gemini Key arriba a la derecha.`, '(◕‿◕✿)');
+        return;
+      }
+
+      document.getElementById('omi-status').textContent = 'CONECTANDO GEMINI...';
+      try {
+        const pend = tareas.filter(x => !x.ok).map(x => x.t).join(', ');
+        const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiKey}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: `Eres Omi, una asistente Cyber-Neko tierna y futurista. Responde en español en máximo 2 frases cortas. Tareas pendientes del usuario: ${pend}. Mensaje del usuario: ${txt}` }] }]
+          })
+        });
+        const data = await res.json();
+        const reply = data?.candidates?.[0]?.content?.parts?.[0]?.text || 'Revisa tu clave de API de Gemini.';
+        document.getElementById('omi-status').textContent = 'EN LÍNEA ✨';
+        hablarOmi(reply, '(✧ω✧)');
+      } catch (e) {
+        hablarOmi('No pude conectar con Gemini, verifica tu conexión a internet.', '(；ω；)');
+      }
+    }
+
+    // 3. TEMPORIZADOR
+    function iniciarTimer(min, label) {
+      clearInterval(timerInt);
+      segs = min * 60;
+      hablarOmi(`Iniciando temporizador de ${min} minutos para ${label}. ¡Concéntrate, yo te aviso!`, '(•̀ᴗ•́)و');
+      timerInt = setInterval(() => {
+        segs--;
+        const m = String(Math.floor(segs / 60)).padStart(2, '0');
+        const s = String(segs % 60).padStart(2, '0');
+        document.getElementById('timer-display').textContent = `${m}:${s}`;
+        if (segs <= 0) {
+          clearInterval(timerInt);
+          hablarOmi(`¡Tiempo terminado! Completaste tu bloque de ${min} minutos. ¡Marca tu tarea!`, '✧*｡٩(ˊᗜˋ*)و✧*｡');
+        }
+      }, 1000);
+    }
+
+    function detenerTimer() {
+      clearInterval(timerInt);
+      document.getElementById('timer-display').textContent = '25:00';
+      hablarOmi('Temporizador detenido.', '(◕‿◕✿)');
+    }
+
+    // 4. TAREAS Y HÁBITOS
+    function addTarea() {
+      const v = document.getElementById('in-tarea').value.trim();
+      if (!v) return;
+      tareas.unshift({ t: v, ok: false });
+      document.getElementById('in-tarea').value = '';
+      hablarOmi(`Agregada la misión: ${v}`, '(✧ω✧)');
+      render();
+    }
+
+    function toggleT(i) {
+      tareas[i].ok = !tareas[i].ok;
+      if (tareas[i].ok) hablarOmi(`¡Excelente! Completaste ${tareas[i].t}`, '(≧◡≦)');
+      render();
+    }
+
+    function toggleH(hi, di) {
+      habitos[hi].d[di] = habitos[hi].d[di] ? 0 : 1;
+      if (habitos[hi].d[di]) melodiaKawaii();
+      render();
+    }
+
+    function abrirModalAPI() {
+      document.getElementById('input-key').value = geminiKey;
+      document.getElementById('modal-api').classList.remove('hidden');
+      document.getElementById('modal-api').classList.add('flex');
+    }
+
+    function guardarKey() {
+      geminiKey = document.getElementById('input-key').value.trim();
+      localStorage.setItem('omi_key', geminiKey);
+      document.getElementById('modal-api').classList.add('hidden');
+      hablarOmi('¡Clave de Gemini guardada con éxito!', '(≧◡≦)');
+    }
+
+    function render() {
+      localStorage.setItem('omi_t', JSON.stringify(tareas));
+      localStorage.setItem('omi_h', JSON.stringify(habitos));
+
+      const ul = document.getElementById('ul-tareas');
+      ul.innerHTML = '';
+      let ok = 0;
+      tareas.forEach((x, i) => {
+        if (x.ok) ok++;
+        ul.innerHTML += `
+          <li onclick="toggleT(${i})" class="p-2.5 rounded-xl border flex items-center gap-2 ${x.ok ? 'bg-slate-900/40 border-white/5 line-through text-slate-500' : 'bg-slate-900 border-teal-400/30'}">
+            <input type="checkbox" ${x.ok ? 'checked' : ''} class="accent-teal-400">
+            <span>${x.t}</span>
+          </li>`;
+      });
+      document.getElementById('badge-tareas').textContent = `${ok}/${tareas.length}`;
+
+      const ch = document.getElementById('cont-habitos');
+      ch.innerHTML = '';
+      habitos.forEach((h, hi) => {
+        let btns = '';
+        h.d.forEach((v, di) => {
+          btns += `<button onclick="toggleH(${hi},${di})" class="w-7 h-7 rounded-lg text-[10px] font-bold ${v ? 'bg-gradient-to-tr from-purple-500 to-teal-400 text-slate-950' : 'bg-slate-900 text-slate-400'}">${dias[di]}</button>`;
+        });
+        ch.innerHTML += `
+          <div class="bg-slate-950/60 p-2 rounded-xl border border-purple-400/20 flex justify-between items-center">
+            <span class="text-xs text-purple-200 font-bold">${h.n}</span>
+            <div class="flex gap-1">${btns}</div>
+          </div>`;
+      });
+
+      const dat = dias.map((_, di) => habitos.reduce((a, h) => a + h.d[di], 0));
+      if (chart) chart.destroy();
+      chart = new Chart(document.getElementById('chartOmi'), {
+        type: 'line',
+        data: { labels: dias, datasets: [{ data: dat, borderColor: '#2dd4bf', backgroundColor: 'rgba(192,132,252,0.2)', fill: true, tension: 0.4 }] },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { stepSize: 1, color: '#94a3b8' } }, x: { ticks: { color: '#2dd4bf' } } } }
+      });
+    }
+
+    render();
+  </script>
+</body>
+</html>
+
